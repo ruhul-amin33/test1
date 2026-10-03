@@ -1,4 +1,6 @@
--- RumeDio Shop: full import file (schema + demo data). Import once in phpMyAdmin.
+-- RumeDio Shop - ONE-FILE DATABASE IMPORT
+-- phpMyAdmin > select your database > Import > choose this file > Go.
+-- Safe to import again: existing data is never deleted or duplicated.
 
 -- RumeDio Shop database schema (complete, matches server/app.js)
 -- Safe to run many times (IF NOT EXISTS). Works on an empty database.
@@ -197,3 +199,6 @@ UNION ALL
 SELECT 'sports-outdoor' AS slug, 'Football Size 5 Training Ball' AS title, 'Machine-stitched, durable outer, consistent bounce.' AS description, 780 AS price, 1050 AS old_price, 95 AS stock, 4.3 AS rating, 275 AS sold, 0 AS is_featured
 ) t JOIN categories c ON c.slug = t.slug
 WHERE NOT EXISTS (SELECT 1 FROM products);
+
+-- Clothing categories ask for sizes when adding a product
+UPDATE categories SET has_sizes = 1 WHERE slug IN ('mens-fashion','womens-fashion');

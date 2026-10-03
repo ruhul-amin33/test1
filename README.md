@@ -234,6 +234,7 @@ bazarghor/
 ## 📜 Changelog
 
 ### v1.1.0 — ক্লায়েন্ট হ্যান্ডওভার
+- **Admin login ফর্ম** (`/#/admin`): `ADMIN_EMAIL` + `ADMIN_PASSWORD` env দিয়ে সরাসরি ঢোকা যায়। বিকল্প: `npm run create-admin -- email password`
 - অ্যাডমিন: অর্ডার সার্চ/ফিল্টার (স্ট্যাটাস, তারিখ), **Excel ডাউনলোড** (Orders + Order items শিট), Help গাইড ট্যাব, পাসওয়ার্ড বদল (Settings)
 - `database/schema.sql` এখন কোডের সাথে মেলে (variants, images, vouchers, slides, settings, zone/discount সহ)। নতুন ডাটাবেসে `rumedio_database.sql` ইম্পোর্ট করুন। পুরনো ডাটাবেস হলে `migrations/002_upgrade_old_database.sql`
 - নতুন dependency: `exceljs` (`npm install` দিন)

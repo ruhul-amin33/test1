@@ -190,6 +190,45 @@ app.post('/api/auth/login', h(async (req, res) => {
   res.json({ token: sign(rows[0]), user: publicUser(rows[0]) });
 }));
 
+/* ---------- admin login (separate form at /#/admin) ----------
+   Admin = the ADMIN_EMAIL account. Set ADMIN_EMAIL + ADMIN_PASSWORD in Vercel -> that login works immediately
+   (account is created automatically). Later the owner can change the password from Admin > Settings.
+   ADMIN_PASSWORD also works as a "forgot password" reset: log in with it and it is restored. */
+const safeEq = (a, b) => { const x = Buffer.from(String(a)), y = Buffer.from(String(b)); return x.length === y.length && crypto.timingSafeEqual(x, y); };
+const tries = new Map(); // simple brute-force guard (per server instance)
+function tooMany(key) {
+  const now = Date.now(), t = (tries.get(key) || []).filter((x) => now - x < 15 * 60 * 1000);
+  tries.set(key, t);
+  return t.length >= 10;
+}
+app.post('/api/admin/login', h(async (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const password = String(req.body.password || '');
+  if (!email || !password) return res.status(400).json({ error: 'Enter your email and password' });
+  const key = `${req.headers['x-forwarded-for'] || req.ip}|${email}`;
+  if (tooMany(key)) return res.status(429).json({ error: 'Too many wrong attempts. Please wait 15 minutes and try again.' });
+  const envEmail = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+  const envPass = process.env.ADMIN_PASSWORD || '';
+  const owner = !!envEmail && email === envEmail;
+  const [rows] = await query('SELECT * FROM users WHERE email = ?', [email]);
+  let u = rows[0];
+  let ok = !!u && (await bcrypt.compare(password, u.password_hash));
+  if (!ok && owner && envPass && safeEq(password, envPass)) { // first login / password reset
+    const hash = await bcrypt.hash(password, 10);
+    if (u) await query("UPDATE users SET password_hash = ?, role = 'admin' WHERE id = ?", [hash, u.id]);
+    else await query("INSERT INTO users (name,email,phone,password_hash,role) VALUES ('Shop Admin',?,'',?,'admin')", [email, hash]);
+    [[u]] = await query('SELECT * FROM users WHERE email = ?', [email]);
+    ok = true;
+  }
+  if (!ok) { tries.get(key).push(Date.now()); return res.status(401).json({ error: 'Email or password is incorrect' }); }
+  if (u.role !== 'admin') {
+    if (!owner) return res.status(403).json({ error: 'This account is not an admin account' });
+    await query("UPDATE users SET role = 'admin' WHERE id = ?", [u.id]); u.role = 'admin';
+  }
+  tries.delete(key);
+  res.json({ token: sign(u), user: publicUser(u) });
+}));
+
 app.get('/api/auth/me', auth, h(async (req, res) => {
   const [rows] = await query('SELECT id,name,email,phone,role FROM users WHERE id = ?', [req.user.id]);
   if (!rows.length) return res.status(401).json({ error: 'Account not found' });

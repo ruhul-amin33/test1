@@ -42,7 +42,7 @@
     let data = null;
     try { data = await res.json(); } catch { /* not json */ }
     if (!res.ok) {
-      if (res.status === 401 && state.token && !path.startsWith('/auth/login')) logout(true);
+      if (res.status === 401 && state.token && !path.startsWith('/auth/login') && !path.startsWith('/admin/login')) logout(true);
       throw Object.assign(new Error((data && data.error) || 'Something went wrong. Please try again.'), { status: res.status });
     }
     return data;
@@ -682,11 +682,28 @@
   }
 
   /* ---------- admin ---------- */
+  function adminLogin() {
+    setView(`<div class="wrap section"><div class="auth panel panel-pad">
+      <h1>Admin login</h1><p class="hint" style="margin-bottom:1rem">Sign in to manage products, orders and your shop.</p>
+      <form class="form" id="adForm" novalidate>
+        <div class="field"><label for="adEmail">Admin email</label><input id="adEmail" type="email" autocomplete="username" required></div>
+        <div class="field"><label for="adPass">Password</label><input id="adPass" type="password" autocomplete="current-password" required></div>
+        <div class="form-error" id="adErr" hidden></div>
+        <button class="btn btn-block" id="adBtn">Log in</button></form>
+      ${state.user ? `<p class="hint" style="margin-top:.8rem">You are logged in as ${esc(state.user.email)} (not an admin). Log in below with the admin email instead.</p>` : ''}
+      <p class="hint" style="margin-top:.8rem"><a href="#/">← Back to shop</a></p></div></div>`);
+    $('#adForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = $('#adBtn'), err = $('#adErr'); err.hidden = true; btn.disabled = true; btn.textContent = 'Logging in...';
+      try {
+        setSession(await api('/admin/login', { method: 'POST', body: { email: $('#adEmail').value, password: $('#adPass').value } }));
+        pageAdmin();
+      } catch (ex) { err.textContent = ex.message; err.hidden = false; btn.disabled = false; btn.textContent = 'Log in'; }
+    });
+  }
+
   async function pageAdmin() {
-    if (requireLogin('#/admin')) return;
-    if (state.user.role !== 'admin') {
-      return setView('<div class="wrap section"><div class="panel empty"><div class="em">🔒</div><h2>Admin only</h2><p>Log in with the admin email to manage the store.</p></div></div>');
-    }
+    if (!state.user || state.user.role !== 'admin') return adminLogin();
     setView(`<div class="wrap section"><div class="list-head"><h1>Store admin</h1><button class="btn btn-ghost btn-sm" id="logout">Log out</button></div>
       <div class="tabs" role="tablist">
         <button class="tab" role="tab" data-t="dash" aria-selected="true">Overview</button>
@@ -698,7 +715,7 @@
         <button class="tab" role="tab" data-t="settings" aria-selected="false">Settings</button>
         <button class="tab" role="tab" data-t="help" aria-selected="false">Help</button></div>
       <div id="adminBody"></div></div>`);
-    $('#logout').addEventListener('click', () => { logout(); location.hash = '#/'; });
+    $('#logout').addEventListener('click', () => { logout(); toast('Logged out'); pageAdmin(); });
     const go = (t) => {
       $$('.tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.t === t)));
       const bd = $('#adminBody'); bd.onclick = null; bd.onchange = null;

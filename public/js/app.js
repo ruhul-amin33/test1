@@ -63,6 +63,22 @@
     const c = state.cfg;
     $$('[data-site-name]').forEach((el) => { el.textContent = c.siteName; });
     $$('.logo-mark').forEach((el) => { el.textContent = (c.siteName.trim()[0] || 'S').toUpperCase(); });
+    $$('.logo').forEach((el) => {
+      el.querySelectorAll('.logo-pic').forEach((x) => x.remove());
+      const mark = el.querySelector('.logo-mark'), text = el.querySelector('.logo-text');
+      const has = !!c.logoUrl;
+      if (mark) mark.hidden = has;
+      if (text) text.hidden = has && !c.logoShowName;
+      if (has) {
+        const w = document.createElement('span');
+        w.className = 'logo-pic' + (c.logoPlate ? ' plate' : '');
+        const im = document.createElement('img');
+        im.src = cl(c.logoUrl, 600); im.alt = c.siteName; im.decoding = 'async';
+        w.appendChild(im); el.insertBefore(w, el.firstChild);
+      }
+    });
+    const fav = document.querySelector('link[rel="icon"]');
+    if (fav) { if (!fav.dataset.def) fav.dataset.def = fav.href; fav.href = c.logoUrl ? cl(c.logoUrl, 96) : fav.dataset.def; }
     if (!/^\/(product|category)/.test(location.hash.replace(/^#/, ''))) document.title = `${c.siteName} - Shop online in Bangladesh`;
     $$('[data-support-mail]').forEach((el) => { el.textContent = c.supportEmail; if (el.tagName === 'A') el.href = 'mailto:' + c.supportEmail; });
     $$('[data-support-phone]').forEach((el) => {
@@ -849,6 +865,7 @@
       ${sec('How do I change the big banner on the home page?', ['Open <b>Slideshow</b>. Edit a slide or add a new one (headline, small text, button, colour or photo).', 'Drag or use the arrows to change the order. Switch a slide off to hide it without deleting it.'])}
       ${sec('How do I add or rename a category?', ['Open <b>Categories</b>. Add a name and pick an emoji. Tick "has sizes" for clothes and shoes.', 'A category with products inside cannot be deleted. Move or delete those products first.'])}
       ${sec('How do I change the shop name, phone, email or top message?', ['Open <b>Settings</b> and edit the boxes under Shop details and Website text. Press Save.'])}
+      ${sec('How do I change my logo?', ['Open <b>Settings</b> and find the <b>Logo</b> section.', 'Press <b>Upload photo</b> and choose your logo. A PNG with a transparent background, about 600 × 200 px, looks best.', 'Check the green preview box. Turn the white-background option on or off until it looks right. You can also show the shop name next to the logo.', 'Press <b>Save settings</b>. The logo appears in the header, footer and browser tab. It fits automatically on phone and computer.', 'To go back to the letter icon, press <b>Remove photo</b> and save.'])}
       ${sec('How do I change my password?', ['Open <b>Settings</b> and scroll to <b>Change my password</b>.', 'Type your current password and the new one, then press Save.'])}
       <p class="hint">Problem with the website itself (it will not open, or it says the database is unreachable)? Wait a minute and refresh. If it continues, contact the person who set up your hosting.</p></div>`;
   }
@@ -933,7 +950,7 @@
         <input type="file" id="${id}File" accept="image/*" hidden>
         <div class="hint" id="${id}Status" aria-live="polite">JPG, PNG or WEBP. Resized automatically.</div></div></div>
     <input id="${id}Img" placeholder="Or paste an image link (https://...)" value="${esc(value || '')}" style="margin-top:.5rem" aria-label="Image link"></div>`;
-  function wireUploader(id, { onChange, busy, icon = '📷', max = 1400 }) {
+  function wireUploader(id, { onChange, busy, icon = '📷', max = 1400, png = false }) {
     const prev = $('#' + id + 'Prev'), status = $('#' + id + 'Status'), pick = $('#' + id + 'Pick'),
       file = $('#' + id + 'File'), url = $('#' + id + 'Img'), clear = $('#' + id + 'Clear');
     const show = () => { prev.innerHTML = img({ id: 0, title: 'Preview', image_url: url.value.trim() || null, icon }, 400); clear.hidden = !url.value.trim(); };
@@ -946,7 +963,7 @@
       if (f.size > 15 * 1024 * 1024) { status.textContent = 'Image is too large (max 15 MB).'; return; }
       pick.disabled = true; busy(true); status.textContent = 'Preparing photo...';
       try {
-        url.value = await uploadImage(await shrink(f, max), (n) => { status.textContent = 'Uploading... ' + n + '%'; });
+        url.value = await uploadImage(await shrink(f, max, png), (n) => { status.textContent = 'Uploading... ' + n + '%'; });
         show(); onChange(); status.textContent = 'Photo uploaded ✓ Now press Save.';
       } catch (ex) { status.textContent = ex.message; toast(ex.message, 'err'); }
       pick.disabled = false; busy(false); file.value = '';
@@ -1108,6 +1125,12 @@
         <div class="field-row">
           <div class="field"><label for="stMail">Support email</label><input id="stMail" type="email" value="${esc(c.supportEmail)}"></div>
           <div class="field"><label for="stPhone">Support phone (optional)</label><input id="stPhone" inputmode="tel" value="${esc(c.supportPhone)}" placeholder="01XXXXXXXXX"></div></div>
+        <h3 style="margin-top:.6rem">Logo</h3>
+        ${uploaderHtml('stLogo', c.logoUrl, 'Shop logo')}
+        <div class="logo-tester" id="logoTest" aria-label="Logo preview"><span class="hint" style="color:#DCEBE6">Preview (how it looks in the header)</span><div class="logo" id="logoTestBox"><span class="logo-mark">R</span><span class="logo-text"></span></div></div>
+        <label class="check"><input type="checkbox" id="stPlate" ${c.logoPlate ? 'checked' : ''}> <span>Show logo on a white background (keep this on if your logo is dark or has a solid background)</span></label>
+        <label class="check"><input type="checkbox" id="stShowName" ${c.logoShowName ? 'checked' : ''}> <span>Also show the shop name next to the logo</span></label>
+        <p class="hint">Best result: a wide PNG with transparent background, about 600 × 200 px. The logo is fitted automatically, never cut or stretched. It is also used as the browser tab icon. Press Save settings after uploading.</p>
         <h3 style="margin-top:.6rem">Delivery charge</h3>
         <div class="field-row">
           <div class="field"><label for="stDhaka">Inside Dhaka (৳)</label><input id="stDhaka" type="number" min="0" step="1" value="${c.feeDhaka}"></div>
@@ -1139,6 +1162,20 @@
         } catch (ex) { err.textContent = ex.message; err.hidden = false; }
         btn.disabled = false;
       });
+      const logoPreview = () => {
+        const box = $('#logoTestBox'); box.querySelectorAll('.logo-pic').forEach((x) => x.remove());
+        const u = $('#stLogoImg').value.trim(), mark = box.querySelector('.logo-mark'), txt = box.querySelector('.logo-text');
+        txt.textContent = $('#stName').value;
+        mark.hidden = !!u; txt.hidden = !!u && !$('#stShowName').checked;
+        if (u) {
+          const w = document.createElement('span'); w.className = 'logo-pic' + ($('#stPlate').checked ? ' plate' : '');
+          const im = document.createElement('img'); im.src = cl(u, 600); im.alt = 'Logo'; w.appendChild(im); box.insertBefore(w, box.firstChild);
+        } else mark.textContent = ($('#stName').value.trim()[0] || 'S').toUpperCase();
+      };
+      wireUploader('stLogo', { onChange: logoPreview, busy: (b) => { $('#stSave').disabled = b; }, icon: '🏷️', max: 800, png: true });
+      ['stPlate', 'stShowName'].forEach((i) => $('#' + i).addEventListener('change', logoPreview));
+      $('#stName').addEventListener('input', logoPreview);
+      logoPreview();
       $('#setForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = $('#stSave'), err = $('#stErr'); err.hidden = true; btn.disabled = true;
@@ -1146,7 +1183,8 @@
           const r = await api('/admin/settings', { method: 'PUT', body: {
             siteName: $('#stName').value, supportEmail: $('#stMail').value, supportPhone: $('#stPhone').value,
             feeDhaka: $('#stDhaka').value, feeOutside: $('#stOut').value, freeShipMin: $('#stFree').value,
-            freeShipOutside: $('#stFreeOut').checked, hideStock: $('#stHide').checked, topbarText: $('#stTop').value, footerText: $('#stFoot').value } });
+            freeShipOutside: $('#stFreeOut').checked, hideStock: $('#stHide').checked, topbarText: $('#stTop').value, footerText: $('#stFoot').value,
+            logoUrl: $('#stLogoImg').value.trim(), logoPlate: $('#stPlate').checked, logoShowName: $('#stShowName').checked } });
           state.cfg = { ...state.cfg, ...r.settings }; applyConfig();
           toast('Settings saved');
         } catch (ex) { err.textContent = ex.message; err.hidden = false; }
@@ -1156,7 +1194,7 @@
   }
 
   /* ---------- photo upload (Cloudinary, signed) ---------- */
-  async function shrink(file, max = 1400) {
+  async function shrink(file, max = 1400, png = false) {
     if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return file; // gif etc. jemon ache temon
     try {
       const bmp = await createImageBitmap(file);
@@ -1164,9 +1202,9 @@
       const c = document.createElement('canvas');
       c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
       const ctx = c.getContext('2d');
-      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); // transparent PNG er jonno
+      if (!png) { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); } // transparent PNG: product photo te shada, logo te transparent thake
       ctx.drawImage(bmp, 0, 0, c.width, c.height);
-      const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.85));
+      const blob = await new Promise((r) => c.toBlob(r, png ? 'image/png' : 'image/jpeg', 0.85));
       return blob && blob.size < file.size ? blob : file;
     } catch { return file; }
   }

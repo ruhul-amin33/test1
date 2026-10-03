@@ -530,3 +530,18 @@ th { color: var(--muted); font-weight: 500; white-space: nowrap; }
 .link-row input:focus { outline: 2px solid var(--brand); border-color: var(--brand); }
 .check { align-items: flex-start; }
 .check input { margin-top: .25rem; flex: none; }
+
+/* ---------- shop logo: always fits the header (never cropped or stretched) ---------- */
+.logo[hidden], .logo-mark[hidden], .logo-text[hidden] { display: none; }
+.logo-pic { display: inline-flex; align-items: center; justify-content: center; flex: none; max-width: min(11rem, 46vw); }
+.logo-pic img { display: block; height: 2.5rem; width: auto; max-width: 100%; object-fit: contain; }
+.logo-pic.plate { background: #fff; border-radius: 10px; padding: .25rem .6rem; }
+.logo-pic.plate img { height: 2.1rem; }
+.footer .logo-pic img { height: 2.75rem; }
+.footer .logo-pic.plate img { height: 2.3rem; }
+@media (max-width: 420px) {
+  .logo-pic { max-width: 40vw; }
+  .logo-pic img { height: 2.1rem; }
+  .logo-pic.plate img { height: 1.75rem; }
+}
+.logo-tester { background: var(--brand); border-radius: var(--r-md); padding: .7rem .9rem; display: grid; gap: .5rem; color: #fff; }

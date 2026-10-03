@@ -62,7 +62,10 @@ async function getConfig(run = query) {
     freeShipOutside: s.free_ship_outside !== undefined ? s.free_ship_outside === '1' : env.FREE_SHIP_OUTSIDE === 'true',
     hideStock: s.hide_stock === '1',
     topbarText: s.topbar_text || '',
-    footerText: s.footer_text || ''
+    footerText: s.footer_text || '',
+    logoUrl: s.logo_url || '',
+    logoPlate: s.logo_plate !== '0',          // logo-r pichone shada background (default on)
+    logoShowName: s.logo_show_name === '1'    // logo-r pashe dokan-er naam dekhabe
   };
 }
 function stdShipping(c, zone, subtotal) {
@@ -778,7 +781,10 @@ app.put('/api/admin/settings', auth, admin, h(async (req, res) => {
   if (!(feeDhaka >= 0 && feeDhaka <= 10000)) return res.status(400).json({ error: 'Enter a valid Dhaka delivery charge' });
   if (!(feeOutside >= 0 && feeOutside <= 10000)) return res.status(400).json({ error: 'Enter a valid outside-Dhaka delivery charge' });
   if (!(freeMin >= 0 && freeMin <= 10000000)) return res.status(400).json({ error: 'Enter a valid free-delivery minimum' });
+  const logoUrl = str(b.logoUrl, 500);
+  if (logoUrl && !/^https:\/\/\S+$/.test(logoUrl)) return res.status(400).json({ error: 'Logo link must start with https://' });
   const rows = [
+    ['logo_url', logoUrl], ['logo_plate', b.logoPlate ? '1' : '0'], ['logo_show_name', b.logoShowName ? '1' : '0'],
     ['site_name', siteName], ['support_email', email], ['support_phone', phone],
     ['fee_dhaka', String(feeDhaka)], ['fee_outside', String(feeOutside)], ['free_ship_min', String(freeMin)],
     ['free_ship_outside', b.freeShipOutside ? '1' : '0'], ['hide_stock', b.hideStock ? '1' : '0'],
